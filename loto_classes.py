@@ -82,7 +82,7 @@ class Card:
                     s_num=' ' + s_num
                 result += s_sep + (s_num if num > 0 else space if num == 0 else cross)
                 s_sep = sep
-            result+='\n'# if row < len(self.lines)-1 else ''
+            result+='\n'
         name = 'Карточка игрока ' + self.name
         name_len = len(name)
         width = 3 * LINE_CELLS_COUNT - 1
@@ -113,7 +113,6 @@ class Human(Player):
             result = not self.card.check_number(number=current_number)
         if not result:
             self.is_lost = True
-        return
 
     def get_choice(self)->bool:
         return input(f'{self.name}, ваш ход: зачеркнуть цифру? (y/n): ') == 'y'
@@ -122,7 +121,7 @@ class Game:
     def __init__(self) -> None:
         while True:
             try:
-                players_count = int(input('Введите количество игроков >1: '))
+                players_count = int(self.get_players_count())
                 if players_count>1:
                     break
             except:
@@ -133,9 +132,9 @@ class Game:
         for i in range(players_count):
             while True:
                 try:
-                    player_type = input(f'Введите тип игрока №{i+1} человек или computer (h/c): ')
+                    player_type = self.get_player_type()
                     if player_type == 'h':
-                        name = input(f'Введите имя игрока №{i+1}: ')
+                        name = self.get_human_name()
                         self.players.append(Human(name=name))
                         break
                     elif player_type == 'c':
@@ -146,6 +145,15 @@ class Game:
                 except:
                     pass
                 print('Тип игрока введен некорректно!')
+
+    def get_players_count(self)->str:
+        return input('Введите количество игроков >1: ')
+
+    def get_player_type(self)->str:
+        return input(f'Введите тип игрока №{i+1} человек или computer (h/c): ')
+
+    def get_human_name(self)->str:
+        return input(f'Введите имя игрока №{i+1}: ')
 
     def begin(self):
         bag = NumGenerator(numbers_count=NUMBERS_COUNT) #Мешок с бочонками лото
@@ -161,12 +169,15 @@ class Game:
             for player in self.players:
                 assert isinstance(player, Player)
                 if not player.is_lost:
-                    if len(self.players) == 1:
-                        print(f'Игрок {player.name} выиграл!')
                     player.make_move(current_number=current_number)
                     if player.is_lost:
-                        print(f'Игрок {player.name} проиграл!')
                         self.players.remove(player)
+                        if len(self.players) == 1:
+                            player = self.players[0]
+                            print(f'Игрок {player.name} выиграл!')
+                            return player
+                        else:
+                            print(f'Игрок {player.name} проиграл!')
                     elif player.card.is_full:
                         print(f'Игрок {player.name} выиграл!')
                         return player
