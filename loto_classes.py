@@ -1,4 +1,6 @@
+from __future__ import annotations
 import random
+from functools import reduce
 from abc import abstractmethod
 
 NUMBERS_COUNT = 90 #Количество номеров (бочонков)
@@ -18,13 +20,27 @@ class NumGenerator:
         Returns:
             int: номер
         """
-        
+
         try:
             pos = random.randint(0, len(self.numbers)-1)
             result = self.numbers.pop(pos)
         except:
             result = 0
         return result
+
+    def __str__(self) -> str:
+        result: str = reduce(lambda n1, n2: n1+n2, [str(n)+', ' for n in self.numbers])
+        return result.strip(', ')
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, NumGenerator)\
+            and len(self.numbers)==len(other.numbers)\
+            and reduce(
+                lambda x, y : x and y,
+                map(lambda p, q: p == q, self.numbers, other.numbers), True)
+
+    def __len__(self) -> int:
+        return len(self.numbers)
 
 class Card:
     def __init__(self, player_name:str) -> None:
@@ -64,7 +80,7 @@ class Card:
         else:
             return False
 
-    def get_text(self) -> str:
+    def __str__(self) -> str:
         """Функция представления содержимого карточки в виде текста
 
         Returns:
@@ -91,6 +107,17 @@ class Card:
             name += '-' * (width - len(name))
         return name + '\n' + result + '-' * width
 
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Card):
+            return False
+        if self.name!=other.name:
+            return False
+        for n_line in range(LINE_COUNT):
+            if not reduce(
+                lambda x, y : x and y,
+                map(lambda p, q: p == q, self.lines[n_line], other.lines[n_line]), True):
+                return False
+        return True
 class Player:
     def __init__(self, name: str) -> None:
         self.name = name
@@ -100,6 +127,16 @@ class Player:
     @abstractmethod
     def make_move(self, current_number: int):
         pass
+
+    def __str__(self) -> str:
+        return f'Игрок: {self.name} ({self.__class__.__name__})\n{str(self.card)}'
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Player):
+            return False
+        if self.name!=other.name:
+            return False
+        return self.card==other.card
 
 class Computer(Player):
     def make_move(self, current_number: int):
@@ -132,9 +169,9 @@ class Game:
         for i in range(players_count):
             while True:
                 try:
-                    player_type = self.get_player_type()
+                    player_type = self.get_player_type(player_num=i+1)
                     if player_type == 'h':
-                        name = self.get_human_name()
+                        name = self.get_human_name(player_num=i+1)
                         self.players.append(Human(name=name))
                         break
                     elif player_type == 'c':
@@ -149,11 +186,11 @@ class Game:
     def get_players_count(self)->str:
         return input('Введите количество игроков >1: ')
 
-    def get_player_type(self)->str:
-        return input(f'Введите тип игрока №{i+1} человек или computer (h/c): ')
+    def get_player_type(self, player_num:int)->str:
+        return input(f'Введите тип игрока №{player_num} человек или computer (h/c): ')
 
-    def get_human_name(self)->str:
-        return input(f'Введите имя игрока №{i+1}: ')
+    def get_human_name(self, player_num:int)->str:
+        return input(f'Введите имя игрока №{player_num}: ')
 
     def begin(self):
         bag = NumGenerator(numbers_count=NUMBERS_COUNT) #Мешок с бочонками лото
@@ -165,7 +202,7 @@ class Game:
             print(f'\nНовый бочонок: {current_number} (осталось {len(bag.numbers)})')
             for player in self.players:
                 assert isinstance(player, Player)
-                print(player.card.get_text())
+                print(player.card)
             for player in self.players:
                 assert isinstance(player, Player)
                 if not player.is_lost:
@@ -181,3 +218,9 @@ class Game:
                     elif player.card.is_full:
                         print(f'Игрок {player.name} выиграл!')
                         return player
+
+    def __str__(self) -> str:
+        result = ''
+        for player in self.players:
+            result += str(player) + '\n'
+        return result.strip(', ')
